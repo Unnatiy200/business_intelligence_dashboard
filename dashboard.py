@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import sqlite3
 import plotly.express as px
 from groq import Groq
 # Initialize Groq Client (place this right after imports)
@@ -19,12 +20,20 @@ st.markdown("### Superstore Sales Analysis")
 # Load Data
 @st.cache_data
 def load_data():
-    df = pd.read_csv("Sample - Superstore.csv", encoding='latin1')
+    conn = sqlite3.connect('superstore.db')
+    df = pd.read_sql("""
+        SELECT *,
+               strftime('%Y', [Order Date]) as Year_Str,
+               strftime('%m', [Order Date]) as Month_Str
+        FROM sales
+    """, conn)
+    conn.close()
     df['Order Date'] = pd.to_datetime(df['Order Date'])
     df['Ship Date'] = pd.to_datetime(df['Ship Date'])
     df['Year'] = df['Order Date'].dt.year
     df['Month'] = df['Order Date'].dt.month
     df['Month Name'] = df['Order Date'].dt.strftime('%B')
+    df = df.drop(columns=['Year_Str', 'Month_Str'], errors='ignore')
     return df
 
 df = load_data()
@@ -94,6 +103,41 @@ fig = px.scatter(df_filtered, x='Discount', y='Profit',
 fig.add_hline(y=0, line_dash="dash", line_color="red")
 st.plotly_chart(fig, use_container_width=True)
 
+# SQL Query Explorer
+st.markdown("---")
+st.subheader("🔍 SQL Query Explorer")
+st.markdown("Write your own SQL queries to explore the data!")
+
+default_query = """SELECT Region, 
+       ROUND(SUM(Sales), 2) as Total_Sales,
+       ROUND(SUM(Profit), 2) as Total_Profit,
+       COUNT(*) as Total_Orders
+FROM sales
+GROUP BY Region
+ORDER BY Total_Sales DESC"""
+
+user_query = st.text_area("Write SQL Query:", value=default_query, height=150)
+
+if st.button("▶️ Run Query"):
+    try:
+        conn = sqlite3.connect('superstore.db')
+        result = pd.read_sql(user_query, conn)
+        conn.close()
+        st.success(f"✅ Query returned {len(result)} rows")
+        st.dataframe(result, use_container_width=True)
+
+        # Download results as CSV
+        csv = result.to_csv(index=False)
+        st.download_button(
+            label="📥 Download Results as CSV",
+            data=csv,
+            file_name="query_results.csv",
+            mime="text/csv"
+        )
+    except Exception as e:
+        st.error(f"❌ SQL Error: {str(e)}")
+
+        
 # KPI Alerts Section
 st.markdown("---")
 st.subheader("🚨 KPI Alerts & Warnings")
@@ -173,7 +217,7 @@ for status, message in alerts:
     else:
         st.success(f"{status}: {message}")
 
-        
+
 # PDF Report Export Section
 st.markdown("---")
 st.subheader("📄 Export Business Report")
