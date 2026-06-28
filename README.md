@@ -87,3 +87,6 @@ business_intelligence_dashboard/
 - AI/LLM integration
 - Dashboard development
 - Business Intelligence & Reporting
+
+## 🖥️ Dashboard Preview
+![Dashboard](screenshots/screenshot.png)
