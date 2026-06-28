@@ -89,4 +89,4 @@ business_intelligence_dashboard/
 - Business Intelligence & Reporting
 
 ## 🖥️ Dashboard Preview
-![Dashboard](Screenshots/screenshots.png)
+![Dashboard](Screenshots/Screenshots.png)
